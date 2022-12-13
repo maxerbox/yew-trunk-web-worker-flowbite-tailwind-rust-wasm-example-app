@@ -1,0 +1,14 @@
+{
+  "name": "lbp-tidy-ofx",
+  "version": "1.0.0",
+  "description": "This is a fairly minimal template for a Yew app that's built with [Trunk].",
+  "main": " ",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "flowbite": "^1.5.4"
+  }
+}
