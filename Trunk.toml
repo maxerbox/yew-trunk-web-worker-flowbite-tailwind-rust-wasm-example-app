@@ -5,4 +5,4 @@ dist = "dist"
 [[hooks]]
 stage = "build"
 command = "sh"
-command_arguments = ["-c", "npx tailwindcss -i src/assets/css/tailwind.css -o $TRUNK_STAGING_DIR/tailwind.css"]
+command_arguments = ["-c", "npx -y tailwindcss -i src/assets/css/tailwind.css -o $TRUNK_STAGING_DIR/tailwind.css"]
