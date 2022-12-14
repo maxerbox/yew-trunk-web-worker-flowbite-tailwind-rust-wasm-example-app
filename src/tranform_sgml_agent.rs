@@ -63,7 +63,7 @@ impl yew_agent::Worker for SGMLTranformWorker {
     }
 
     fn name_of_resource() -> &'static str {
-        "worker.js"
+        "/yew-trunk-web-worker-flowbite-tailwind-rust-wasm-example-app/worker.js"
     }
 }
 
