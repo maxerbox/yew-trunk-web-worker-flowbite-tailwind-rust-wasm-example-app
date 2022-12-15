@@ -8,7 +8,8 @@ use yew_agent::{HandlerId, Public, WorkerLink};
 
 use crate::gen_url::UrlExt;
 
-static WORKER_PATH: &'static str = concat!(default_env!("TRUNK_PUBLIC_URL", "/"), "worker.js");
+static WORKER_PATH: &'static str =
+    concat!(default_env!("TRUNK_BUILD_PUBLIC_URL", "/"), "worker.js");
 
 const INDEX_DATE_TOKEN_DELTA_FROM_TRNNAME_OPENTAG: usize = 7;
 const INDEX_TEXTNODE_NAME_TOKEN_DELTA_FROM_TRNNAME_OPENTAG: usize = 2;
