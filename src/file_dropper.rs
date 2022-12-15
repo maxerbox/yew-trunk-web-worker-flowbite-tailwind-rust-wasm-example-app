@@ -1,5 +1,4 @@
 use std::mem;
-
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{EventTarget, File, HtmlInputElement};
 use yew::prelude::*;

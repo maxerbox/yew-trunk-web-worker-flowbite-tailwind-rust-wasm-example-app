@@ -1,10 +1,10 @@
-use std::rc::Rc;
-pub mod file_dropper;
+mod file_dropper;
+pub mod gen_url;
 pub mod tranform_sgml_agent;
-use crate::{file_dropper::FileDropper, tranform_sgml_agent::SGMLTransformWorkerInput};
-
 use crate::tranform_sgml_agent::SGMLTranformWorker;
+use crate::{file_dropper::FileDropper, tranform_sgml_agent::SGMLTransformWorkerInput};
 use gloo_console::log;
+use std::rc::Rc;
 use web_sys::window;
 use yew::prelude::*;
 
