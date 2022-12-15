@@ -39,7 +39,7 @@ pub fn app() -> Html {
          >
            <span class="text-sm text-gray-500 sm:text-center dark:text-gray-400"
              >{"© 2022 "}
-             <a href="https://github.com/maxerbox/yew-trunk-web-worker-flowbite-tailwind-rust-wasm-example-app" class="hover:underline">{"GitHub"}</a> {" - Simon Sassi - Tranforms OFX files for LBP"}
+             <a href="https://github.com/maxerbox/yew-trunk-web-worker-flowbite-tailwind-rust-wasm-example-app" class="hover:underline">{"GitHub"}</a> {" - Simon Sassi - Transforms OFX files for LBP"}
            </span>
            <script src="https://unpkg.com/flowbite@1.5.4/dist/flowbite.js"></script>
          </footer>
