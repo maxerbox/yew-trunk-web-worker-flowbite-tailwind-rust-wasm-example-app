@@ -21,7 +21,7 @@ jobs:
           target: wasm32-unknown-unknown
       - name: Install and Build
         env:
-          TRUNK_BUILD_PUBLIC_URL: ${{ github.event.repository.name }}/
+          TRUNK_BUILD_PUBLIC_URL: /${{ github.event.repository.name }}/
         run: |
           npm install
           trunk build --release
