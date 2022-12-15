@@ -4,13 +4,13 @@ This is a hobby project used to learn Rust and Yew.
 
 Every month, I make a budget and list my expenses. My bank offers to export my
 expenses as an [OFX file](https://en.wikipedia.org/wiki/Open_Financial_Exchange)
-spec v1.6. This is an SGML file listing transactions.
+spec v1.6. This is a SGML file listing transactions.
 
-Unfortunately, my bank formats the file in a strange way, with dates contained
-in transaction descriptions.
+Unfortunately, my bank exports the file in a strange way, with dates contained
+in transaction names.
 
-So what this application does is taking an ofx file, sending it to a worker and
-then applying transformations to it to extract the date and format properly.
+So what this application does is taking an ofx file, sending it to a web worker
+and then applying transformations to extract the date and format it properly.
 
 ->Input
 
