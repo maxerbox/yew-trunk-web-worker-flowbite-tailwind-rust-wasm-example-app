@@ -1,10 +1,18 @@
 use chrono::prelude::*;
+use default_env::default_env;
+use gloo_timers::callback::Timeout;
 use serde::{Deserialize, Serialize};
 use sgmlish::{transforms::Transform, SgmlEvent, SgmlFragment};
-
-use gloo_file::Blob;
-use web_sys::Url;
+use web_sys::{File, FilePropertyBag, Url};
 use yew_agent::{HandlerId, Public, WorkerLink};
+
+use crate::gen_url::UrlExt;
+
+static WORKER_PATH: &'static str = concat!(default_env!("TRUNK_PUBLIC_URL", "/"), "worker.js");
+
+const INDEX_DATE_TOKEN_DELTA_FROM_TRNNAME_OPENTAG: usize = 7;
+const INDEX_TEXTNODE_NAME_TOKEN_DELTA_FROM_TRNNAME_OPENTAG: usize = 2;
+const WAIT_TIME_BEFORE_REVOKING: u32 = 1_000;
 
 pub struct SGMLTranformWorker {
     link: WorkerLink<Self>,
@@ -50,21 +58,37 @@ impl yew_agent::Worker for SGMLTranformWorker {
             })
             .build();
         let fragment = parser.parse(&msg.file).ok().unwrap();
-
         let fragment = convert_date(fragment);
-        let blob =
-            Blob::new_with_options(fragment.to_string().as_bytes(), Some("application/x-ofx"));
-        let obj_url = Url::create_object_url_with_blob(&web_sys::Blob::from(blob)).unwrap();
-
-        let output = Self::Output {
-            url: obj_url.to_string(),
-        };
+        let url = create_obj_url_from_fragment(fragment);
+        let output = Self::Output { url };
         self.link.respond(id, output);
     }
 
     fn name_of_resource() -> &'static str {
-        "/yew-trunk-web-worker-flowbite-tailwind-rust-wasm-example-app/worker.js"
+        &WORKER_PATH
     }
+}
+
+fn create_obj_url_from_fragment(fragment: SgmlFragment) -> String {
+    let parts = js_sys::Array::of1(&unsafe {
+        js_sys::Uint8Array::view(fragment.to_string().as_bytes()).into()
+    });
+    let file = File::new_with_buffer_source_sequence_and_options(
+        &parts,
+        "export.ofx",
+        FilePropertyBag::new().type_("application/x-ofx"),
+    )
+    .unwrap();
+    let obj_url = UrlExt::create_object_url_with_file(&file).unwrap();
+    let r = obj_url.clone();
+    Timeout::new(WAIT_TIME_BEFORE_REVOKING, move || {
+        Url::revoke_object_url(obj_url.as_str())
+            .map_err(|err| println!("{:?}", err))
+            .ok();
+    })
+    .forget();
+
+    r
 }
 
 fn convert_date(fragment: SgmlFragment) -> SgmlFragment {
@@ -73,22 +97,10 @@ fn convert_date(fragment: SgmlFragment) -> SgmlFragment {
     for (i, event) in fragment.iter().enumerate().skip(1) {
         match event {
             SgmlEvent::OpenStartTag { name } if name == "NAME" => {
-                match &fragment.as_slice()[i + 2] {
+                match &fragment.as_slice()[i + INDEX_TEXTNODE_NAME_TOKEN_DELTA_FROM_TRNNAME_OPENTAG]
+                {
                     SgmlEvent::Character(c) => {
-                        let (before, after) = c.rsplit_once(' ').unwrap();
-
-                        if let Ok(date) = NaiveDate::parse_from_str(after, "%d.%m.%y") {
-                            transform.remove_at(i - 7);
-                            transform.insert_at(
-                                i - 7,
-                                SgmlEvent::Character(date.format("%Y%m%d").to_string().into()),
-                            );
-                            transform.remove_at(i + 2);
-                            transform.insert_at(
-                                i + 2,
-                                SgmlEvent::Character(before.trim().to_owned().into()),
-                            );
-                        }
+                        apply_tranforms_for_transactions(c, &mut transform, i);
                     }
                     _ => {}
                 }
@@ -105,4 +117,24 @@ fn convert_date(fragment: SgmlFragment) -> SgmlFragment {
         }
     }
     transform.apply(fragment)
+}
+
+fn apply_tranforms_for_transactions(
+    c: &std::borrow::Cow<str>,
+    transform: &mut Transform,
+    i: usize,
+) {
+    let (before, after) = c.rsplit_once(' ').unwrap();
+    if let Ok(date) = NaiveDate::parse_from_str(after, "%d.%m.%y") {
+        transform.remove_at(i - INDEX_DATE_TOKEN_DELTA_FROM_TRNNAME_OPENTAG);
+        transform.insert_at(
+            i - INDEX_DATE_TOKEN_DELTA_FROM_TRNNAME_OPENTAG,
+            SgmlEvent::Character(date.format("%Y%m%d").to_string().into()),
+        );
+        transform.remove_at(i + INDEX_TEXTNODE_NAME_TOKEN_DELTA_FROM_TRNNAME_OPENTAG);
+        transform.insert_at(
+            i + INDEX_TEXTNODE_NAME_TOKEN_DELTA_FROM_TRNNAME_OPENTAG,
+            SgmlEvent::Character(before.trim().to_owned().into()),
+        );
+    }
 }
