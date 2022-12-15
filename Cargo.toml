@@ -2,7 +2,7 @@
 name = "lbp-convert"
 version = "0.1.0"
 edition = "2021"
-description = "Template for starting a Yew project using Trunk"
+description = "Example project, wasm yew webworker, do transformations on a OFX SGML file"
 readme = "README.md"
 repository = "https://github.com/maxerbox/yew-trunk-web-worker-flowbite-tailwind-rust-wasm-example-app"
 license = "MIT"
