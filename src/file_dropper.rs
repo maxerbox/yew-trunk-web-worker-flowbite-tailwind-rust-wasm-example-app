@@ -2,12 +2,16 @@ use std::mem;
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{EventTarget, File, HtmlInputElement};
 use yew::prelude::*;
+
 pub enum FileDropperMsg {
+    /// Whenever a file is selected or not
     SelectFile(Option<File>),
 }
 
 #[derive(Properties, PartialEq)]
 pub struct FileDropperProps {
+    /// Event fired when a valid file is selected.
+    /// Event contains file contents read with Blob.text(), an UTF8 string
     pub on_file_input: Callback<String>,
 }
 
@@ -17,6 +21,7 @@ impl Component for FileDropper {
     type Properties = FileDropperProps;
 
     fn create(_ctx: &Context<Self>) -> Self {
+        // At the beginning, there was no file...
         Self { file: None }
     }
     #[allow(unused_must_use)]
@@ -31,9 +36,13 @@ impl Component for FileDropper {
                 let f1 = Closure::once(f1);
                 let ret = (&f1).clone();
                 if let Some(file) = &file {
+                    // read the blob text (we could have used a filereader here, but it's more convenient to use a js promise),
+                    // once the js promise is resolved, then emit the event
                     file.text().then(ret);
                 }
                 mem::forget(f1);
+                // forget to call the destructor of the Closure, else the function will be destroyed when out of scope.
+                // NOTE: That's a closure called only once, so it will cause memory leaks if file.text() promise fails
                 self.file = file;
             }
         }
@@ -53,8 +62,9 @@ impl Component for FileDropper {
                     |e: Event| {
                     // when dispatched does the target get added.
                     let target: Option<EventTarget> = e.target();
+                    // cast into an HtmlInputElement, not really safe
                     let input = target.and_then(|t| t.dyn_into::<HtmlInputElement>().ok());
-
+                        // if there is a file, emit a new message with the file
                         if let Some(input) = input {
                             let files = input.files();
                             if let Some(files) = files {
@@ -73,6 +83,7 @@ impl Component for FileDropper {
     }
 }
 
+/// A file dropper html component
 pub struct FileDropper {
     file: Option<File>,
 }

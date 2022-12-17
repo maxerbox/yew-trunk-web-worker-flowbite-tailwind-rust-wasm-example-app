@@ -1,3 +1,5 @@
+//! This is an agent (webworker) doing computations in another thread. It communicates with main app thread.
+
 use chrono::prelude::*;
 use default_env::default_env;
 use gloo_timers::callback::Timeout;
@@ -8,14 +10,19 @@ use yew_agent::{HandlerId, Public, WorkerLink};
 
 use crate::gen_url::UrlExt;
 
+/// Used by gloo-worker, specify the worker.js file path genereated.
 static WORKER_PATH: &'static str =
     concat!(default_env!("TRUNK_BUILD_PUBLIC_URL", "/"), "worker.js");
 
 const INDEX_DATE_TOKEN_DELTA_FROM_TRNNAME_OPENTAG: usize = 7;
 const INDEX_TEXTNODE_NAME_TOKEN_DELTA_FROM_TRNNAME_OPENTAG: usize = 2;
+
+/// Time before calling Url.revokeObjectURL on the file object url. Prevents memory leaks
+/// This should be a reasonable amount of time to send the SGML output file to the main app thread. We cannot  
 const WAIT_TIME_BEFORE_REVOKING: u32 = 1_000;
 
 pub struct SGMLTranformWorker {
+    /// link used to send messages to main thread
     link: WorkerLink<Self>,
 }
 
@@ -26,6 +33,7 @@ pub struct SGMLTransformWorkerInput {
 
 #[derive(Serialize, Deserialize)]
 pub struct SGMLTransformWorkerOutput {
+    /// the file object URL, will looks like blob://.../{uuid}
     pub url: String,
 }
 
@@ -49,6 +57,7 @@ impl yew_agent::Worker for SGMLTranformWorker {
         // browser thread!
         let parser = sgmlish::Parser::builder()
             .expand_marked_sections()
+            // replace specific entities, from OFX standard
             .expand_entities(|entity| match entity {
                 "lt" => Some("<"),
                 "gt" => Some(">"),
@@ -70,6 +79,9 @@ impl yew_agent::Worker for SGMLTranformWorker {
     }
 }
 
+/// Tranforms an list of SGML Entities contained in a fragment to an utf8 string,
+/// create a new File with mimetype application/x-ofx and named export.ofx, returns this File object url.
+/// It also revokes automatically the object url after some time.
 fn create_obj_url_from_fragment(fragment: SgmlFragment) -> String {
     let parts = js_sys::Array::of1(&unsafe {
         js_sys::Uint8Array::view(fragment.to_string().as_bytes()).into()
@@ -82,19 +94,20 @@ fn create_obj_url_from_fragment(fragment: SgmlFragment) -> String {
     .unwrap();
     let obj_url = UrlExt::create_object_url_with_file(&file).unwrap();
     let r = obj_url.clone();
+    // use gloo-timer. Revoke the file url after some time to prevent memory links
     Timeout::new(WAIT_TIME_BEFORE_REVOKING, move || {
         Url::revoke_object_url(obj_url.as_str())
             .map_err(|err| println!("{:?}", err))
             .ok();
     })
-    .forget();
+    .forget(); // forget the destructor of Timeout, else when the variable is out of scope it will automatically cancel the js Timeout.
 
     r
 }
-
+/// iterates over Sgml tokens, and apply transformation to matching tags
 fn convert_date(fragment: SgmlFragment) -> SgmlFragment {
     let mut transform = Transform::new();
-
+    // note that we never mutate fragment while iterating over it, we stack tranformations and apply them later.
     for (i, event) in fragment.iter().enumerate().skip(1) {
         match event {
             SgmlEvent::OpenStartTag { name } if name == "NAME" => {
@@ -117,9 +130,10 @@ fn convert_date(fragment: SgmlFragment) -> SgmlFragment {
             | SgmlEvent::OpenStartTag { .. } => {}
         }
     }
-    transform.apply(fragment)
+    transform.apply(fragment) // Apply stacked transformations to the fragment.
 }
 
+/// Create transformations from a matching token, stack them in the tranform object.
 fn apply_tranforms_for_transactions(
     c: &std::borrow::Cow<str>,
     transform: &mut Transform,

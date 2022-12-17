@@ -1,3 +1,6 @@
+//! This module generate a new type UrlExt with wasm_bindgen
+//! The reason is that web_sys does not supports generating bindings for createObjectURL() with a file argument.
+
 #![allow(unused_imports)]
 use super::*;
 use wasm_bindgen::prelude::*;
